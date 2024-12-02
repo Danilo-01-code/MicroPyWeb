@@ -1,0 +1,2 @@
+[controle_scripts]
+MicroPyWeb = cli:cli_run

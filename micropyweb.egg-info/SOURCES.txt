@@ -1,0 +1,12 @@
+setup.py
+micropyweb/__init__.py
+micropyweb/cli.py
+micropyweb/core.py
+micropyweb/templating.py
+micropyweb.egg-info/PKG-INFO
+micropyweb.egg-info/SOURCES.txt
+micropyweb.egg-info/dependency_links.txt
+micropyweb.egg-info/entry_points.txt
+micropyweb.egg-info/requires.txt
+micropyweb.egg-info/top_level.txt
+tests/test_core.py
