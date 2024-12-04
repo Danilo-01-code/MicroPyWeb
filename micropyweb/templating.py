@@ -1,4 +1,4 @@
-from Jinja2 import Enviromment, FileSystemLoader, Template
+from jinja2 import Environment, FileSystemLoader
 
 def render_response(
         template_name:str,
@@ -6,6 +6,8 @@ def render_response(
         **context
 ) -> str:
     """
+    Render a template with "template_name" name and a given context for Jinja2 engine
+
       Parameters:
     - template_name: the template file name to be rendered (e.g., "index.html").
     - template_folder: the folder where the template files are located (default is "templates").
@@ -15,7 +17,7 @@ def render_response(
     - A string containing the rendered HTML or content from the template.
     """
 
-    jinja2_env = Enviromment(
+    jinja2_env = Environment(
         loader = FileSystemLoader(template_folder),
         autoescape = True
     )
@@ -24,3 +26,6 @@ def render_response(
 
     return template.render(context)
   
+
+def redirect():
+    pass

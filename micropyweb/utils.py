@@ -1,38 +1,32 @@
 import os
-import re
-import click
+import ast
+from typing import Union,Tuple
+from random import randint
+import string
 
-def find_app_instance(class_name: str = "MicroPyWeb"): #TODO documentation
-    """Search for an instance of the specified class in Python files in the current directory."""
+def find_app_instance(class_name: str = "MicroPyWeb") -> Union[Tuple[str,str],None]:
+    """Find an application installed under a given class_name and its respective file path"""
 
-    # Regex pattern to find the variable that instantiates the specified class (e.g., MicroPyWeb or any other class)
-    pattern = r'(\w+)\s*=\s*' + re.escape(class_name) + r'\s*\('  # Looks for something like 'app = MicroPyWeb()'
+    directory = os.getcwd() 
 
-    for root, dirs, files in os.walk('.'):
-        for file in files:
-            if file.endswith('.py'):
-                path = os.path.join(root, file)
-                try:
-                    with open(path, 'r', encoding='utf-8') as f:
-                        content = f.read()
-                        match = re.search(pattern, content) 
+    for file in os.listdir(directory):
+        if file.endswith(".py"):
+            file_path = os.path.join(directory, file)
+            with open(file_path, "r", encoding="utf-8") as f:
+                tree = ast.parse(f.read())
 
-                        if match:
-                            instance = match.group(1)
+            for node in (n for n in ast.walk(tree) if isinstance(n, ast.Assign)):
+                if (isinstance(node.value, ast.Call) and isinstance(node.value.func, ast.Name) and node.value.func.id == class_name):
+                    return node.targets[0].id, file_path
+    return None
 
-                            with open(path, 'r', encoding='utf-8') as file_exec:
-                                code = file_exec.read()
-                                # Remove 'if __name__ == "__main__":' block to ensure code is executed
-                                code = re.sub(r"if __name__\s*==\s*['\"]__main__['\"]\s*[:].*", "", code)
-                                exec(code, globals()) 
 
-                            if instance in globals():
-                                return globals()[instance]  
-                            else:
-                                click.echo(f"Could not find the instance for {instance} in {path}")
-                                return None
+def generate_secret_key():
+    """This function generate a secret key, duh"""
+    char = list(string.ascii_letters) + list(string.digits)
+    secret_key = []
 
-                except Exception as e:
-                    raise Exception(f"Could not read the file {path}: {e}")
+    for i in range(32):
+        secret_key.append(char[randint(0,len(char)-1)])
 
-    return None  
+    print(''.join(secret_key))
