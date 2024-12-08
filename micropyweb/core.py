@@ -5,8 +5,8 @@ import traceback
 import logging
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from micropyweb.request_messages import ColorWSGIRequest, color_text_red
-
+from micropyweb.request_messages import ColorWSGIRequest, color_text_red, color_text_green
+import re
 
 class MicroPyWeb: #TODO config #TODO jsonfy
     """
@@ -26,9 +26,10 @@ class MicroPyWeb: #TODO config #TODO jsonfy
     def __init__(self):
         self.routes = {}
         self.error_funcs = {}
+        self.headers = {}
         self.middlewares = []
         self.config = MicroPyWeb.config
-        self.methods = ["GET","POST"]
+        self.methods = ["GET","POST","PUT"]
 
     def route(self, path: str = "/",methods: list = ["GET"]):
         """
@@ -55,8 +56,8 @@ class MicroPyWeb: #TODO config #TODO jsonfy
             }
             return func
         
-        return route_decorator
-    
+        return route_decorator  
+
     def handle_request(self, environ):
         """
         Manipulate the request and return a WSGI response
@@ -72,8 +73,8 @@ class MicroPyWeb: #TODO config #TODO jsonfy
         methods = route_info["methods"]
 
         try:
-            if "POST" not in methods:
-                response_body = handler() #if the method is GET, the request parameter it's not necessary
+            if "POST" not in methods or "PUT" not in methods:
+                response_body = handler() #if the method is only GET, the request parameter it's not necessary
             else:
                 response_body = handler(request)
             return Response(body=response_body, status=200, content_type="text/html")
@@ -130,7 +131,7 @@ class MicroPyWeb: #TODO config #TODO jsonfy
                 
             print("Debug mode: ", end="")
             if self.config["DEBUG"]: 
-                print(True) 
+                print(color_text_green("True")) 
 
                 # Ativate watchdog to monitorate python files
                 event_handler = FileSystemEventHandler()
@@ -139,7 +140,7 @@ class MicroPyWeb: #TODO config #TODO jsonfy
                 observer.schedule(event_handler, path='.', recursive=True)
                 observer.start()
             else: 
-                print(False)
+                print(color_text_red("False"))
 
             print(f"Server initialized in http://{host}:{port}", color_text_red("(Ctrl + C to quit)"))
 
@@ -157,7 +158,14 @@ class MicroPyWeb: #TODO config #TODO jsonfy
         """
         if not event.is_directory and event.src_path.endswith(".py"):
             logging.info(f"Change in the file: {event.src_path}")
-
+    
+    def add_cookies_to_response(self, response):
+        """
+        Adiciona cookies à resposta, se houver cookies para adicionar.
+        """
+        if hasattr(self, "cookies_to_set"):
+            for cookie in self.cookies_to_set:
+                response.add_header("Set-Cookie", cookie)
 
     def not_found(self, path):
         handler = self.error_funcs.get(404)

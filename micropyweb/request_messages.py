@@ -30,3 +30,9 @@ def color_text_red(text):
     red = "\033[31m"
     reset = "\033[m"
     return f"{red}{text}{reset}"
+
+def color_text_green(text):
+    """make a given text green with ANSI color"""
+    red = "\033[32m"
+    reset = "\033[m"
+    return f"{red}{text}{reset}"

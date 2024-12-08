@@ -1,5 +1,5 @@
 from jinja2 import Environment, FileSystemLoader
-#TODO redirect
+
 def render_response(
         template_name:str,
         template_folder = "templates",
@@ -26,6 +26,3 @@ def render_response(
 
     return template.render(context)
   
-
-def redirect():
-    pass
