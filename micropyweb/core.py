@@ -6,7 +6,9 @@ import logging
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from micropyweb.request_messages import ColorWSGIRequest, color_text_red, color_text_green
-import re
+import http.cookies 
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import time
 
 class MicroPyWeb: #TODO config #TODO jsonfy
     """
@@ -167,7 +169,20 @@ class MicroPyWeb: #TODO config #TODO jsonfy
             for cookie in self.cookies_to_set:
                 response.add_header("Set-Cookie", cookie)
 
-    def not_found(self, path):
+    def not_found(self, path:str):
+        """
+        Handles HTTP 404 (Not Found) errors.
+
+        Parameters:
+        -path (str): the path that micropyweb tried to access
+
+        Notes:
+        - If a custom view function is defined using the `error_handler()` decorator,
+        it will override this default `not_found` behavior.
+        - When `DEBUG` is set to True in the configuration, this function will display
+        additional details about the error to assist in development. This behavior
+        will not apply if the function is overridden using `error_handler()`.
+        """
         handler = self.error_funcs.get(404)
         if handler:
             return Response(handler(),status=404)
@@ -180,6 +195,21 @@ class MicroPyWeb: #TODO config #TODO jsonfy
         return Response(body, status=404)
 
     def internal_server_error(self, e):
+        """
+        Handles HTTP 500 (Internal server error).
+
+        This function is invoked when an unhandled exception occurs in the application, 
+        resulting in a server error response.
+
+        Parameters:
+        - e (Exception): The exception object that triggered the error.
+
+        Notes:
+        - If "DEBUG" is set to True in the configuration, this function may include a detailed 
+        traceback in the response to assist in debugging.
+        - You can override this behavior by defining a custom view function using the 
+        `error_handler()` decorator.
+        """
         handler = self.error_funcs.get(500)
         if handler:
             return Response(handler(),status=500)
@@ -191,3 +221,34 @@ class MicroPyWeb: #TODO config #TODO jsonfy
             logging.error(color_text_red(f"Traceback (most recent call last):\n{traceback.format_exc()}"))
 
         return Response(body, status=500)
+
+
+class CookieHandler(BaseHTTPRequestHandler):
+#TODO
+    def make_cookie(self,key,value):
+        """
+        Create a cookie, generate a header 'Set-Cookie' in HTTP response
+
+        Parameters
+        """
+        cookie = http.cookies.SimpleCookie()
+        cookie[key] = value
+        cookie[key]["path"] = "/"
+        cookie[key]['secure'] = True
+        cookie[key]['httponly'] = True
+
+        expires_time = time.time() + 7 * 24 * 3600  # 7 days in seconds
+        expires_str = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime(expires_time))
+        cookie[key]["expires"] = expires_str
+
+        self.send_response(200)
+        self.send_header("Content-Type","text/html; charset=utf-8")
+        self.send_header("Set-Cookie",cookie.output(header='',sep='').strip())
+        self.end_headers()
+
+    def cookie(self, cookie_header, cookie_name):
+        cookies = http.cookies.SimpleCookie(cookie_header)
+
+        if cookie_name in cookies:
+            return cookies[cookie_name].value
+        return

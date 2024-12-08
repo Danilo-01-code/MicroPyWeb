@@ -1,4 +1,4 @@
-from micropyweb.core import MicroPyWeb
+from micropyweb.core import MicroPyWeb, CookieHandler
 from micropyweb.templating import render_response
 
 # MicroPyWeb instance initalization example

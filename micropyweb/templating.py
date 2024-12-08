@@ -25,4 +25,3 @@ def render_response(
     template = jinja2_env.get_template(template_name)
 
     return template.render(context)
-  
