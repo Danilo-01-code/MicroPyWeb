@@ -6,9 +6,10 @@ import logging
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from micropyweb.request_messages import ColorWSGIRequest, color_text_red, color_text_green
+from micropyweb.utils import normalize
 from werkzeug.routing import Map, Rule
+from werkzeug.exceptions import NotFound
 import json
-import re
 
 
 class MicroPyWeb: #TODO config
@@ -23,22 +24,19 @@ class MicroPyWeb: #TODO config
 
     config = {
         "DEBUG":False,
-        "SECRET_KEY":None,
     }
 
     def __init__(self):
-        self.routes = Map([])
         self.route_info = {}
         self.error_funcs = {}
         self.headers = {}
-        self.request = Request
         self.jsonfy = False
-        self.dynamic_path = ""
-        self.middlewares = []
+        self.request = Request
         self.config = MicroPyWeb.config
+        self.dynamic_route = {}
         self.methods = ["GET","POST","PUT"]
 
-    def route(self, path: str = "/",methods: list = ["GET"], dinamic_route = False):
+    def route(self, path: str = "/",methods: list = ["GET"]):
         """
         A decorator to tell the class what URL should trigger your view function
         
@@ -51,60 +49,60 @@ class MicroPyWeb: #TODO config
         -path: contain the URL (default: "/")
         -method:contain the http verb for the URL (default: "GET")       
         """
-        if dinamic_route:
-            self.dynamic_path = path
 
         for method in methods:
             if method not in self.methods:
                 raise ValueError(f"Method {method} is not allowed.")
         
-        def route_decorator(func):        
-            self.route_info[path] = {
-                "handler": func,
-                "methods": methods,
-            }
-
-            self.routes.add(Rule(path, endpoint=func, methods=methods))
+        def route_decorator(func):
+            if "<" in path and ">" in path: # The dynamic routes are defined with angle brackets 
+                  self.dynamic_route[normalize(path)] = Map([Rule(path, endpoint=func, methods=methods)])
+            else:
+                self.route_info[path] = {
+                    "handler": func,
+                    "methods": methods,
+                }  
+            
             return func
           
         return route_decorator  
     
-    def handle_dinamic_routing(self,environ):
-        adapter = self.routes.bind_to_environ(environ)
+    def _handle_dynamic_routing(self,environ, path):
+        """ 
+        Manipulate requests with dynamic routing.
+        """
 
         try:
+            adapter = self.dynamic_route[normalize(path)].bind_to_environ(environ)
             endpoint, args = adapter.match()
             handler = endpoint 
             response_body = handler(**args)
+            if self.jsonfy: 
+                return self._jsonfy(response_body)
             return Response(body=response_body, status=200, content_type="text/html")
+        except KeyError:
+            return self.not_found(path)
+        except NotFound:
+            return self.not_found(path)
         except Exception as e:
             return self.internal_server_error(e)
-    
-    def is_dynamic(self, path:str) -> bool:
-        path1_clean = re.sub(r'<.*?>', '', self.dynamic_path)
-        path2_clean = re.sub(r'<.*?>', '', path)
-
-        path1_parts = path1_clean.split('/')
-        path2_parts = path2_clean.split('/')
-    
-        if len(path1_parts) < 2 or len(path2_parts) < 2:
-            return False  
-
-        return path1_parts[1] == path2_parts[1]
-
-    def handle_request(self, environ):
+  
+    def _handle_request(self, environ):
         """
-        Manipulate the request and return a WSGI response
+        Manipulate the request and return a WSGI response with Webob Response object.
+
+        This method can return text, html or json for the Browser
+        
+        Note:
+        - To transform your python dict in a json file the MicroPyWeb jsonfy attribute should
+        be True
         """
         request = self.request(environ)
         path = request.path
-        
-        if self.is_dynamic(path):
-            return self.handle_dinamic_routing(environ)
-
         route_info = self.route_info.get(path)
+        
         if not route_info:
-           return self.not_found(path)
+            return self._handle_dynamic_routing(environ, path)
 
         handler = route_info["handler"]
         methods = route_info["methods"]
@@ -115,18 +113,23 @@ class MicroPyWeb: #TODO config
             else:
                 response_body = handler(request)
 
-            if self.jsonfy: # transform the python dict response_body in a json file
-                if isinstance(response_body,dict):
-                    json_data = json.dumps(response_body) 
-                    self.jsonfy = False
-                    return Response(body=json_data,status=200,content_type="application/json; charset=utf-8")
-                
-                raise ValueError("The return of the view function should be a dict when jsonfy = True")
-            
+            if self.jsonfy: 
+                return self._jsonfy(response_body)
+                        
             return Response(body=response_body, status=200, content_type="text/html")
         except Exception as e:
             return self.internal_server_error(e)
-
+        
+    def _jsonfy(self,response_body):
+        """
+        Transform the python dict response_body in a json file.
+        """
+        if isinstance(response_body,dict):
+            json_data = json.dumps(response_body) 
+            self.jsonfy = False
+            return Response(body=json_data,status=200,content_type="application/json; charset=utf-8")
+        
+        raise ValueError("The return of the view function should be a dict when jsonfy = True")
         
     def error_handler(self, status: int):
         """
@@ -163,7 +166,7 @@ class MicroPyWeb: #TODO config
         Returns:
         - list[bytes]: An iterable (commonly a list) of byte strings representing the body of the HTTP response.
         """
-        response = self.handle_request(environ)
+        response = self._handle_request(environ)
         return response(environ, start_response)
 
 

@@ -3,7 +3,6 @@ import ast
 from typing import Union,Tuple
 from random import randint
 import string
-import json
 from webob import Response
 
 
@@ -23,6 +22,9 @@ def find_app_instance(class_name: str = "MicroPyWeb") -> Union[Tuple[str,str],No
                     return node.targets[0].id, file_path
     return None
 
+def normalize(path: str):
+    last_slash_index = path.rfind("/")  
+    return path[:last_slash_index+1]
 
 def generate_secret_key():
     """This function generate a secret key, duh"""
