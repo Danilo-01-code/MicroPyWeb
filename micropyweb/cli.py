@@ -5,7 +5,9 @@ from micropyweb.request_messages import color_text_red
 
 @click.group()
 def cli():
-    """command lines to run micropyweb framework"""
+    """
+    A command line interface to help in the application development with MiroPyWeb.
+    """
     pass
 
 @click.command()

@@ -6,11 +6,12 @@ import logging
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from micropyweb.request_messages import ColorWSGIRequest, color_text_red, color_text_green
-import http.cookies 
-from http.server import BaseHTTPRequestHandler, HTTPServer
-import time
+from werkzeug.routing import Map, Rule
+import json
+import re
 
-class MicroPyWeb: #TODO config #TODO jsonfy
+
+class MicroPyWeb: #TODO config
     """
     A WSGI aplication with a simple implementation based on Flask and FastApi
 
@@ -26,14 +27,18 @@ class MicroPyWeb: #TODO config #TODO jsonfy
     }
 
     def __init__(self):
-        self.routes = {}
+        self.routes = Map([])
+        self.route_info = {}
         self.error_funcs = {}
         self.headers = {}
+        self.request = Request
+        self.jsonfy = False
+        self.dynamic_path = ""
         self.middlewares = []
         self.config = MicroPyWeb.config
         self.methods = ["GET","POST","PUT"]
 
-    def route(self, path: str = "/",methods: list = ["GET"]):
+    def route(self, path: str = "/",methods: list = ["GET"], dinamic_route = False):
         """
         A decorator to tell the class what URL should trigger your view function
         
@@ -46,28 +51,58 @@ class MicroPyWeb: #TODO config #TODO jsonfy
         -path: contain the URL (default: "/")
         -method:contain the http verb for the URL (default: "GET")       
         """
-        
+        if dinamic_route:
+            self.dynamic_path = path
+
         for method in methods:
             if method not in self.methods:
                 raise ValueError(f"Method {method} is not allowed.")
         
-        def route_decorator(func):
-            self.routes[path] =   {
-            "handler": func,
-            "methods": methods,
+        def route_decorator(func):        
+            self.route_info[path] = {
+                "handler": func,
+                "methods": methods,
             }
+
+            self.routes.add(Rule(path, endpoint=func, methods=methods))
             return func
-        
+          
         return route_decorator  
+    
+    def handle_dinamic_routing(self,environ):
+        adapter = self.routes.bind_to_environ(environ)
+
+        try:
+            endpoint, args = adapter.match()
+            handler = endpoint 
+            response_body = handler(**args)
+            return Response(body=response_body, status=200, content_type="text/html")
+        except Exception as e:
+            return self.internal_server_error(e)
+    
+    def is_dynamic(self, path:str) -> bool:
+        path1_clean = re.sub(r'<.*?>', '', self.dynamic_path)
+        path2_clean = re.sub(r'<.*?>', '', path)
+
+        path1_parts = path1_clean.split('/')
+        path2_parts = path2_clean.split('/')
+    
+        if len(path1_parts) < 2 or len(path2_parts) < 2:
+            return False  
+
+        return path1_parts[1] == path2_parts[1]
 
     def handle_request(self, environ):
         """
         Manipulate the request and return a WSGI response
         """
-        request = Request(environ)
+        request = self.request(environ)
         path = request.path
+        
+        if self.is_dynamic(path):
+            return self.handle_dinamic_routing(environ)
 
-        route_info = self.routes.get(path)
+        route_info = self.route_info.get(path)
         if not route_info:
            return self.not_found(path)
 
@@ -75,13 +110,23 @@ class MicroPyWeb: #TODO config #TODO jsonfy
         methods = route_info["methods"]
 
         try:
-            if "POST" not in methods or "PUT" not in methods:
+            if "POST" not in methods and "PUT" not in methods:
                 response_body = handler() #if the method is only GET, the request parameter it's not necessary
             else:
                 response_body = handler(request)
+
+            if self.jsonfy: # transform the python dict response_body in a json file
+                if isinstance(response_body,dict):
+                    json_data = json.dumps(response_body) 
+                    self.jsonfy = False
+                    return Response(body=json_data,status=200,content_type="application/json; charset=utf-8")
+                
+                raise ValueError("The return of the view function should be a dict when jsonfy = True")
+            
             return Response(body=response_body, status=200, content_type="text/html")
         except Exception as e:
             return self.internal_server_error(e)
+
         
     def error_handler(self, status: int):
         """
@@ -161,13 +206,6 @@ class MicroPyWeb: #TODO config #TODO jsonfy
         if not event.is_directory and event.src_path.endswith(".py"):
             logging.info(f"Change in the file: {event.src_path}")
     
-    def add_cookies_to_response(self, response):
-        """
-        Adiciona cookies à resposta, se houver cookies para adicionar.
-        """
-        if hasattr(self, "cookies_to_set"):
-            for cookie in self.cookies_to_set:
-                response.add_header("Set-Cookie", cookie)
 
     def not_found(self, path:str):
         """
@@ -221,34 +259,3 @@ class MicroPyWeb: #TODO config #TODO jsonfy
             logging.error(color_text_red(f"Traceback (most recent call last):\n{traceback.format_exc()}"))
 
         return Response(body, status=500)
-
-
-class CookieHandler(BaseHTTPRequestHandler):
-#TODO
-    def make_cookie(self,key,value):
-        """
-        Create a cookie, generate a header 'Set-Cookie' in HTTP response
-
-        Parameters
-        """
-        cookie = http.cookies.SimpleCookie()
-        cookie[key] = value
-        cookie[key]["path"] = "/"
-        cookie[key]['secure'] = True
-        cookie[key]['httponly'] = True
-
-        expires_time = time.time() + 7 * 24 * 3600  # 7 days in seconds
-        expires_str = time.strftime("%a, %d %b %Y %H:%M:%S GMT", time.gmtime(expires_time))
-        cookie[key]["expires"] = expires_str
-
-        self.send_response(200)
-        self.send_header("Content-Type","text/html; charset=utf-8")
-        self.send_header("Set-Cookie",cookie.output(header='',sep='').strip())
-        self.end_headers()
-
-    def cookie(self, cookie_header, cookie_name):
-        cookies = http.cookies.SimpleCookie(cookie_header)
-
-        if cookie_name in cookies:
-            return cookies[cookie_name].value
-        return
