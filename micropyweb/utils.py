@@ -3,7 +3,6 @@ import ast
 from typing import Union,Tuple
 from random import randint
 import string
-from webob import Response
 
 
 def find_app_instance(class_name: str = "MicroPyWeb") -> Union[Tuple[str,str],None]:
@@ -23,6 +22,9 @@ def find_app_instance(class_name: str = "MicroPyWeb") -> Union[Tuple[str,str],No
     return None
 
 def normalize(path: str):
+    if path[-1] != "/": #fix paths like /users to /users/
+        path += "/"
+
     last_slash_index = path.rfind("/")  
     return path[:last_slash_index+1]
 

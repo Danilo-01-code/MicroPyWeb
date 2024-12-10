@@ -7,7 +7,7 @@ app.config["DEBUG"] = True
 
 # root page 
 @app.route()
-def index():
+def index(): 
     return render_response("index.html")
 
 # post and get method with html templates 
@@ -37,6 +37,7 @@ def username(name):
     data = {"Username":name}
     return data
 
+
 # set and get cookie implementation
 @app.route("/setcookie")
 def setcookie():
@@ -56,5 +57,5 @@ if __name__ == "__main__":
     # You also can run a development server with 
     # >> micropyweb run 
     # using the micropyweb cli
-    app._run()
+   app._run()
 

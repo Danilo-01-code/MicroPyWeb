@@ -34,7 +34,8 @@ class MicroPyWeb: #TODO config
         self.request = Request
         self.config = MicroPyWeb.config
         self.dynamic_route = {}
-        self.methods = ["GET","POST","PUT"]
+        self.allowed_methods = {"GET","POST","PUT"}
+        self.methods = {}
 
     def route(self, path: str = "/",methods: list = ["GET"]):
         """
@@ -50,11 +51,9 @@ class MicroPyWeb: #TODO config
         -method:contain the http verb for the URL (default: "GET")       
         """
 
-        for method in methods:
-            if method not in self.methods:
-                raise ValueError(f"Method {method} is not allowed.")
-        
         def route_decorator(func):
+            self.methods[normalize(path)] = methods
+
             if "<" in path and ">" in path: # The dynamic routes are defined with angle brackets 
                   self.dynamic_route[normalize(path)] = Map([Rule(path, endpoint=func, methods=methods)])
             else:
@@ -65,9 +64,12 @@ class MicroPyWeb: #TODO config
             
             return func
           
-        return route_decorator  
+        return route_decorator 
     
-    def _handle_dynamic_routing(self,environ, path):
+    def get(self, path):
+        return self.route(path)
+    
+    def _handle_dynamic_routing(self,environ, path, request):
         """ 
         Manipulate requests with dynamic routing.
         """
@@ -76,10 +78,15 @@ class MicroPyWeb: #TODO config
             adapter = self.dynamic_route[normalize(path)].bind_to_environ(environ)
             endpoint, args = adapter.match()
             handler = endpoint 
-            response_body = handler(**args)
+            if "POST" not in self.methods and "PUT" not in self.methods:
+                response_body = handler(**args) 
+            else:
+                response_body = handler(request, **args)
+
             if self.jsonfy: 
                 return self._jsonfy(response_body)
             return Response(body=response_body, status=200, content_type="text/html")
+        
         except KeyError:
             return self.not_found(path)
         except NotFound:
@@ -97,18 +104,22 @@ class MicroPyWeb: #TODO config
         - To transform your python dict in a json file the MicroPyWeb jsonfy attribute should
         be True
         """
-        request = self.request(environ)
-        path = request.path
-        route_info = self.route_info.get(path)
-        
-        if not route_info:
-            return self._handle_dynamic_routing(environ, path)
-
-        handler = route_info["handler"]
-        methods = route_info["methods"]
-
         try:
-            if "POST" not in methods and "PUT" not in methods:
+            request = self.request(environ)
+            path = request.path
+            for method in self.methods[normalize(path)]:
+                if method not in self.allowed_methods:
+                    return self.not_allowed_method(method)
+            
+            route_info = self.route_info.get(path)
+        
+            if not route_info:
+                return self._handle_dynamic_routing(environ, path, request)
+
+            handler = route_info["handler"]
+
+        
+            if "POST" not in self.methods and "PUT" not in self.methods:
                 response_body = handler() #if the method is only GET, the request parameter it's not necessary
             else:
                 response_body = handler(request)
@@ -117,6 +128,8 @@ class MicroPyWeb: #TODO config
                 return self._jsonfy(response_body)
                         
             return Response(body=response_body, status=200, content_type="text/html")
+        except KeyError:
+            return self.not_found(path)
         except Exception as e:
             return self.internal_server_error(e)
         
@@ -224,7 +237,9 @@ class MicroPyWeb: #TODO config
         additional details about the error to assist in development. This behavior
         will not apply if the function is overridden using `error_handler()`.
         """
+
         handler = self.error_funcs.get(404)
+
         if handler:
             return Response(handler(),status=404)
         
@@ -234,6 +249,26 @@ class MicroPyWeb: #TODO config
             logging.error(color_text_red(f"404 Not Found - Requested URL: {path}")) 
         
         return Response(body, status=404)
+
+    def not_allowed_method(self, method):
+        """
+        Handles HTTP 405 Method nNot allowed errors.
+
+        Parameters:
+        -method (str): the disallowed method that the system identified
+        """
+
+        handler = self.error_funcs.get(405)
+
+        if handler:
+            return Response(handler(),status=405)
+        
+        body = "<h1>Not Allowed Method</h1>"
+        if self.config["DEBUG"]:
+            body += f"<p>Method: '{method}'</p>"
+            logging.error(f"The method: {method} is not allowed in MicroPyWeb")
+
+        return Response(body,status = 405) 
 
     def internal_server_error(self, e):
         """
@@ -251,11 +286,13 @@ class MicroPyWeb: #TODO config
         - You can override this behavior by defining a custom view function using the 
         `error_handler()` decorator.
         """
+
         handler = self.error_funcs.get(500)
+
         if handler:
             return Response(handler(),status=500)
         
-        body = f"<h1>Internal Server Error<h1>\n {str(e)}"
+        body = f"<h1>Internal Server Error</h1>\n {str(e)}"
         if self.config["DEBUG"]:
             body += "<h2>Traceback (most recent call last):</h2>"
             body += f"<pre>{traceback.format_exc()}</pre>"
