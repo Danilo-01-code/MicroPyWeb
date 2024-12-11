@@ -52,7 +52,7 @@ def shell(file:str):
     the file should be in a format that support object loading,
     such a python file.
 
-     Usage in command line:
+    Usage in command line:
         micropyweb shell --file file.py
 
     Parameters:
