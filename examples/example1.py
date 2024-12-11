@@ -1,4 +1,4 @@
-from micropyweb.core import MicroPyWeb
+from micropyweb.core import MicroPyWeb, set_cookie, get_cookie
 from micropyweb.templating import render_response
 
 # MicroPyWeb instance initalization 
@@ -37,20 +37,21 @@ def username(name):
     data = {"Username":name}
     return data
 
-
-# set and get cookie implementation
 @app.route("/setcookie")
 def setcookie():
-   pass
+    cookie = {"username":"Name"}
+    response = set_cookie(cookie)
+    return response
 
-@app.route("/getcookie")
-def getcookie():
-   pass
+
+@app.route("/getcookie", cookie="username")
+def getcookie(cookie):
+    return cookie
 
 # error handler implementation
-@app.error_handler(404)
-def error_404():
-    return "something wrong..."
+#@app.error_handler(404)
+#def error_404():
+#    return "something wrong..."
 
 
 if __name__ == "__main__":

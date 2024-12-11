@@ -27,6 +27,7 @@ class MicroPyWeb: #TODO config
     }
 
     def __init__(self):
+        self.cookie = {}
         self.route_info = {}
         self.error_funcs = {}
         self.headers = {}
@@ -37,7 +38,7 @@ class MicroPyWeb: #TODO config
         self.allowed_methods = {"GET","POST","PUT"}
         self.methods = {}
 
-    def route(self, path: str = "/",methods: list = ["GET"]):
+    def route(self, path: str = "/",methods: list = ["GET"], cookie = ""):
         """
         A decorator to tell the class what URL should trigger your view function
         
@@ -50,6 +51,7 @@ class MicroPyWeb: #TODO config
         -path: contain the URL (default: "/")
         -method:contain the http verb for the URL (default: "GET")       
         """
+        self.cookie[normalize(path)] = cookie
 
         def route_decorator(func):
             self.methods[normalize(path)] = methods
@@ -118,12 +120,20 @@ class MicroPyWeb: #TODO config
                 return self._handle_dynamic_routing(environ, path, request)
 
             handler = route_info["handler"]
-
-        
+            
+            if self.cookie[normalize(path)] != "":
+                cookie_value = get_cookie(environ, self.cookie[normalize(path)])
+                response_body = handler(cookie_value)
+                return Response(body=response_body, status=200, content_type="text/html")
+            
             if "POST" not in methods and "PUT" not in methods:
                 response_body = handler() #if the method is only GET, the request parameter it's not necessary
+                if isinstance(handler(),Response):
+                    return handler()
             else:
                 response_body = handler(request)
+                if isinstance(handler(request),Response):
+                    return handler(request)
 
             if self.jsonfy: 
                 return self._jsonfy(response_body)
@@ -302,8 +312,26 @@ class MicroPyWeb: #TODO config
         return Response(body, status=500)
     
 
-def set_cookie():
-    pass
+def set_cookie(cookies: dict):
+    """
+    Configurate the given cookies in a Response object.
+    """
+    response = Response()
 
-def get_cookie():
-    pass
+    for cookie_name, cookie_value in cookies.items():
+        response.set_cookie(
+            name=cookie_name,
+            value=cookie_value,
+            max_age=3600,  
+            secure=True,   
+            httponly=True,
+            path="/"      
+        )
+    return response
+
+def get_cookie(environ, cookie_name: str) -> str:
+    """
+    Recuperates a specific cookie with Request object
+    """
+    request = Request(environ)
+    return request.cookies.get(cookie_name)

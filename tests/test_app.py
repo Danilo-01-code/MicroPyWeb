@@ -30,6 +30,10 @@ class SimpleTestCase(unittest.TestCase):
             app.jsonfy = True 
             data = {"Message":"Hello World", "Situation":"Sucess"}
             return data
+        
+        @app.route("/double/path")
+        def double_path():
+            return "Correct"
 
         self.test_app = TestApp(app)
 
@@ -73,6 +77,13 @@ class SimpleTestCase(unittest.TestCase):
 
         self.assertEqual(response_json["Message"], "Hello World")
         self.assertEqual(response_json["Situation"], "Sucess")
+
+    def test_double_path(self):
+        response = self.test_app.get("/double/path")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(f"Correct",response.text)
+
 
 
 if __name__ == "__main__":
