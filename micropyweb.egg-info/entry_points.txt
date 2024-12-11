@@ -1,3 +1,0 @@
-[console_scripts]
-micropyweb = micropyweb.cli:cli
-
