@@ -25,8 +25,9 @@ def normalize(path: str):
     if path[-1] != "/": #fix paths like /users to /users/
         path += "/"
 
-    last_slash_index = path.rfind("/")  
-    return path[:last_slash_index+1]
+    first_slash_index = path.find("/")
+    second_slash_index = path.find("/", first_slash_index + 1)
+    return path[:second_slash_index+1]
 
 def generate_secret_key():
     """This function generate a secret key, duh"""

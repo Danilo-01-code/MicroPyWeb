@@ -107,7 +107,8 @@ class MicroPyWeb: #TODO config
         try:
             request = self.request(environ)
             path = request.path
-            for method in self.methods[normalize(path)]:
+            methods = self.methods[normalize(path)]
+            for method in methods:
                 if method not in self.allowed_methods:
                     return self.not_allowed_method(method)
             
@@ -119,7 +120,7 @@ class MicroPyWeb: #TODO config
             handler = route_info["handler"]
 
         
-            if "POST" not in self.methods and "PUT" not in self.methods:
+            if "POST" not in methods and "PUT" not in methods:
                 response_body = handler() #if the method is only GET, the request parameter it's not necessary
             else:
                 response_body = handler(request)
@@ -299,3 +300,10 @@ class MicroPyWeb: #TODO config
             logging.error(color_text_red(f"Traceback (most recent call last):\n{traceback.format_exc()}"))
 
         return Response(body, status=500)
+    
+
+def set_cookie():
+    pass
+
+def get_cookie():
+    pass
