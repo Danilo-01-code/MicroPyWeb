@@ -1,5 +1,5 @@
 import unittest
-from micropyweb.core import MicroPyWeb
+from micropyweb.core import MicroPyWeb, set_cookie
 from micropyweb.templating import render_response
 from webtest import TestApp
 
@@ -33,8 +33,8 @@ class SimpleTestCase(unittest.TestCase):
         
         @app.route("/double/path")
         def double_path():
-            return "Correct"
-
+            return "Correct"  
+        
         self.test_app = TestApp(app)
 
     def test_homepage(self):
@@ -83,7 +83,6 @@ class SimpleTestCase(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(f"Correct",response.text)
-
 
 
 if __name__ == "__main__":

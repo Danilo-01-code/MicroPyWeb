@@ -12,14 +12,16 @@ from werkzeug.exceptions import NotFound
 import json
 
 
-class MicroPyWeb: #TODO config
+class MicroPyWeb:
     """
-    A WSGI aplication with a simple implementation based on Flask and FastApi
+    A WSGI minimalist and modular aplication.
 
     for usage you should instanciate a object to this central class:
     
         from micropyweb import MicropyWeb
         app = MicropyWeb()
+    
+    for more informations se example1.py in examples and the README.md
     """
 
     config = {
@@ -279,7 +281,8 @@ class MicroPyWeb: #TODO config
             body += f"<p>Method: '{method}'</p>"
             logging.error(f"The method: {method} is not allowed in MicroPyWeb")
 
-        return Response(body,status = 405) 
+        return Response(body,status = 405)
+ 
 
     def internal_server_error(self, e):
         """
@@ -310,7 +313,7 @@ class MicroPyWeb: #TODO config
             logging.error(color_text_red(f"Traceback (most recent call last):\n{traceback.format_exc()}"))
 
         return Response(body, status=500)
-    
+
 
 def set_cookie(cookies: dict):
     """
