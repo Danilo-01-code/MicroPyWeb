@@ -2,7 +2,7 @@
 
 Micropyweb is a minimalist WSGI aplication, is simple and inspired in Flask and FastApi sintax
 
-## A simple wxample
+## A simple example
 
 ```python
 from micropyweb.core import MicroPyWeb
@@ -16,3 +16,5 @@ app = MicroPyWeb()
 def index(): 
     return render_response("index.html")
 ```
+
+to see more examples check the dir 'examples'

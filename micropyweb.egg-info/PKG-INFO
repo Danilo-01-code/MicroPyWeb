@@ -1,4 +1,32 @@
 Metadata-Version: 2.1
 Name: micropyweb
 Version: 0.1
-Requires-Dist: click
+Summary: A minimalist and modula micro framework
+Home-page: UNKNOWN
+License: UNKNOWN
+Description: # Micorpyweb
+        
+        Micropyweb is a minimalist WSGI aplication, is simple and inspired in Flask and FastApi sintax
+        
+        ## A simple example
+        
+        ```python
+        from micropyweb.core import MicroPyWeb
+        from micropyweb.templating import render_response
+        
+        # MicroPyWeb instance initalization 
+        app = MicroPyWeb()
+        
+        # root page 
+        @app.route()
+        def index(): 
+            return render_response("index.html")
+        ```
+        
+        to see more examples check the dir 'examples'
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.6
+Description-Content-Type: text/markdown

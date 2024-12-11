@@ -2,3 +2,5 @@
 env/
 __pycache__/
 micropyweb.egg-info/
+dist/
+build/

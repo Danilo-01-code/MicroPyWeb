@@ -28,13 +28,3 @@ def normalize(path: str):
     first_slash_index = path.find("/")
     second_slash_index = path.find("/", first_slash_index + 1)
     return path[:second_slash_index+1]
-
-def generate_secret_key():
-    """This function generate a secret key, duh"""
-    char = list(string.ascii_letters) + list(string.digits)
-    secret_key = []
-
-    for i in range(32):
-        secret_key.append(char[randint(0,len(char)-1)])
-
-    print(''.join(secret_key))
