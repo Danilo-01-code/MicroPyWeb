@@ -1,6 +1,6 @@
 # Micorpyweb
 
-Micropyweb is a minimalist WSGI aplication, is simple and inspired in Flask and FastApi sintax
+Micropyweb is a minimalist WSGI aplication, is simple and inspired in Flask and FastApi syntax
 
 ## A simple example
 
